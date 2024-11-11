@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Management Tool</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <main>
+        <header class="header">
+          <h1>INVENTORY MANAGEMENT TOOLKIT</h1>
+            <nav>
+                <button onclick="showTab('home')">Home</button>
+                <button onclick="showTab('create')">Create Inventory</button>
+            </nav>
+        </header>
+        <div id="home" class="tab">
+            
+            <h2>Your Inventory</h2>
+            <div id="alerts"></div>
+                <table id="homeInventoryTable">
+                    <thead>
+                      <tr>
+                        <th>Item Name</th>
+                        <th>Quantity</th>
+                        <th>Location</th>
+                        <th>Supplier</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                    
+                    </tbody>
+                  </table>
+                </div>
+            </div>
+            
+            <div class="analytics">
+                <h2>Stock Analytics</h2>
+                <p>Total Items: <span id="totalItems">0</span></p>
+                <p>Low Stock Items: <span id="lowStockItems">0</span></p>
+            </div>
+        </div>
+   <div id="create" class="tab" style="display: none;">
+    <div class="container">  
+        <h1>Inventory Information</h1>
+    
+        <div class="form-container">
+            <input type="text" id="itemName" placeholder="Item Name" required>
+            <input type="number" id="quantity" placeholder="Quantity" required>
+            <input type="text" id="location" placeholder="Location" required>
+            <input type="text" id="supplier" placeholder="Supplier" required>
+            <button onclick="addItem()">Add Item</button>
+        </div>
+    </div> 
+        <div id="alerts"></div>
+        
+        <table id="inventoryTable">
+            <thead>
+                <tr>
+                    <th>Item Name</th>
+                    <th>Quantity</th>
+                    <th>Location</th>
+                    <th>Supplier</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+            </tbody>
+        </table>
+    </main>
+
+<footer>
+    <p>Tracking today, empowering tomorrow. Your inventory, always in view.</p>
+</footer>
+
+ <script src="script.js"></script>
+</body>
+</html>
