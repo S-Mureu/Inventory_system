@@ -110,33 +110,102 @@ function clearForm() {
     document.getElementById('supplier').value = '';
 }
 
-async function makePayment() {
-    const phone = document.getElementById("phone").value;
-    const amount = document.getElementById("amount").value;
-    const responseDiv = document.getElementById("response");
+// Open IndexedDB
+let db;
+const request = indexedDB.open("InventoryDB", 1);
 
-    if (!phone || !amount) {
-        responseDiv.textContent = "Please enter both phone number and amount.";
+request.onerror = (event) => {
+    console.error("Database error:", event.target.errorCode);
+};
+
+request.onsuccess = (event) => {
+    db = event.target.result;
+    loadInventory();
+};
+
+request.onupgradeneeded = (event) => {
+    db = event.target.result;
+    const objectStore = db.createObjectStore("inventory", { keyPath: "id" });
+    objectStore.createIndex("name", "name", { unique: false });
+    objectStore.createIndex("quantity", "quantity", { unique: false });
+    objectStore.createIndex("location", "location", { unique: false });
+    objectStore.createIndex("supplier", "supplier", { unique: false });
+};
+
+// Add an item to IndexedDB and update the table
+function addItem() {
+    const itemName = document.getElementById('itemName').value;
+    const quantity = parseInt(document.getElementById('quantity').value);
+    const location = document.getElementById('location').value;
+    const supplier = document.getElementById('supplier').value;
+
+    if (!itemName || isNaN(quantity) || !location || !supplier) {
+        alert("Please fill in all fields");
         return;
     }
 
-    try {
-        const response = await fetch("http://localhost:3000/pay", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ phone, amount }),
-        });
-        
-        const result = await response.json();
-        if (result.status === "success") {
-            responseDiv.textContent = "Payment prompt sent to your phone!";
-        } else {
-            responseDiv.textContent = "Failed to send payment prompt. Try again.";
-        }
-    } catch (error) {
-        responseDiv.textContent = "Error: " + error.message;
-    }
+    const item = {
+        id: Date.now(),
+        name: itemName,
+        quantity: quantity,
+        location: location,
+        supplier: supplier,
+    };
+
+    // Save item to IndexedDB
+    const transaction = db.transaction(["inventory"], "readwrite");
+    const objectStore = transaction.objectStore("inventory");
+    objectStore.add(item);
+
+    transaction.oncomplete = () => {
+        inventory.push(item);
+        renderTable();
+        clearForm();
+        updateAnalytics();
+    };
+
+    transaction.onerror = (event) => {
+        console.error("Transaction error:", event.target.error);
+    };
 }
 
+// Load inventory data from IndexedDB
+function loadInventory() {
+    inventory = []; // Clear existing inventory array
+
+    const transaction = db.transaction(["inventory"], "readonly");
+    const objectStore = transaction.objectStore("inventory");
+
+    objectStore.openCursor().onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+            inventory.push(cursor.value);
+            cursor.continue();
+        } else {
+            renderTable();
+            renderHomeView();
+            updateAnalytics();
+        }
+    };
+}
+
+// Delete an item from IndexedDB
+function deleteItem(id) {
+    const transaction = db.transaction(["inventory"], "readwrite");
+    const objectStore = transaction.objectStore("inventory");
+
+    objectStore.delete(id);
+
+    transaction.oncomplete = () => {
+        inventory = inventory.filter(item => item.id !== id);
+        renderTable();
+        updateAnalytics();
+    };
+}
+
+// Update analytics counts
+function updateAnalytics() {
+    document.getElementById('totalItems').innerText = inventory.length;
+    document.getElementById('lowStockItems').innerText = 
+        inventory.filter(item => item.quantity < lowStockThreshold).length;
+}
