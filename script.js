@@ -110,4 +110,33 @@ function clearForm() {
     document.getElementById('supplier').value = '';
 }
 
+async function makePayment() {
+    const phone = document.getElementById("phone").value;
+    const amount = document.getElementById("amount").value;
+    const responseDiv = document.getElementById("response");
+
+    if (!phone || !amount) {
+        responseDiv.textContent = "Please enter both phone number and amount.";
+        return;
+    }
+
+    try {
+        const response = await fetch("http://localhost:3000/pay", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ phone, amount }),
+        });
+        
+        const result = await response.json();
+        if (result.status === "success") {
+            responseDiv.textContent = "Payment prompt sent to your phone!";
+        } else {
+            responseDiv.textContent = "Failed to send payment prompt. Try again.";
+        }
+    } catch (error) {
+        responseDiv.textContent = "Error: " + error.message;
+    }
+}
 
