@@ -7,20 +7,43 @@
 
 .header{
     text-align: center;
-    color: azure;
-    padding: 70px;
-    background-color: rgb(192, 230, 228);
-    height:6cm;
+    font-size: 200%;
+    color: rgb(39, 236, 227);
+    padding: 100px;
+    background-image: url(https://st.depositphotos.com/9999814/52407/i/450/depositphotos_524071248-stock-photo-smart-warehouse-management-system-with.jpg);
+    height:9cm;
     width:100%
-    
 
 }
+nav{
+    display: flex;
+    justify-content: space-around;
+    background-color: rgb(192, 230, 228);
+    padding: 10px;
+}
+  .nav button {
+    background-color: #f0f0f0;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  
+  .nav button:hover {
+    background-color: #ddd;
+  }
 body {
     font-family: Arial, sans-serif;
     background-color: #f4f4f9;
     overflow-x: hidden;
     max-height: fit-content;
+    
 }
+.main {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+  }
 
 
 .container {
@@ -103,6 +126,57 @@ button {
 button:hover {
     background-color: #0056b3;
 }
+#search{
+    text-align: center;
+}
+#searchResultsTable{
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+
+#searchResultsTable th, #searchResultsTable td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    
+}
+#searchResultsTable tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+#movementHistoryTable{
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px; 
+}
+#movementHistoryTable th, #movementHistoryTable td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    
+}
+#movementHistoryTable tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+
+
+footer{
+    background-color: rgb(192, 230, 228);
+    text-align: center;
+    height: 1cm;
+    padding: 10px ;
+    margin-top: 25%;
+}
+
+
+footer p {
+    margin: 0;
+}
+
+
 
 footer{
     background-color: rgb(192, 230, 228);

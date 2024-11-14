@@ -1,71 +1,24 @@
 let inventory = [];
 const lowStockThreshold = 5;
 
+// Show tabs and render data
 function showTab(tab) {
-    document.getElementById('home').style.display = tab === 'home' ? 'block' : 'none';
-    document.getElementById('create').style.display = tab === 'create' ? 'block' : 'none';
+    document.querySelectorAll('.tab').forEach(tab => tab.style.display = 'none');
+    document.getElementById(tab).style.display = 'block';
 
-    if (tab === 'home') {
-        renderHomeView();
-    } else {
-        renderTable();
-    }
+    if (tab === 'home') renderHomeView();
+    if (tab === 'create') renderTable();
+    if (tab === 'search') searchInventory(); // Clear results if needed
+    if (tab === 'history') loadHistory();
 }
 
-function addItem() {
-    const itemName = document.getElementById('itemName').value;
-    const quantity = parseInt(document.getElementById('quantity').value);
-    const location = document.getElementById('location').value;
-    const supplier = document.getElementById('supplier').value;
-
-    if (!itemName || isNaN(quantity) || !location || !supplier) {
-        alert("Please fill in all fields");
-        return;
-    }
-
-    const item = {
-        id: Date.now(),
-        name: itemName,
-        quantity: quantity,
-        location: location,
-        supplier: supplier,
-    };
-
-    inventory.push(item);
-    renderTable();
-    clearForm();
-    updateAnalytics();
-}
-
-function renderTable() {
-    const tbody = document.getElementById('inventoryTable').getElementsByTagName('tbody')[0];
-    tbody.innerHTML = '';
-
-    inventory.forEach(item => {
-        const row = tbody.insertRow();
-
-        row.innerHTML = `
-            <td>${item.name}</td>
-            <td>${item.quantity}</td>
-            <td>${item.location}</td>
-            <td>${item.supplier}</td>
-            <td>
-                <button onclick="editItem(${item.id})">Edit</button>
-                <button onclick="deleteItem(${item.id})">Delete</button>
-            </td>
-        `;
-    });
-
-    checkLowStock();
-}
-
+// Render Home View
 function renderHomeView() {
     const homeTbody = document.getElementById('homeInventoryTable').getElementsByTagName('tbody')[0];
     homeTbody.innerHTML = '';
 
     inventory.forEach(item => {
         const row = homeTbody.insertRow();
-
         row.innerHTML = `
             <td>${item.name}</td>
             <td>${item.quantity}</td>
@@ -75,74 +28,64 @@ function renderHomeView() {
     });
 }
 
-function editItem(id) {
-    const item = inventory.find(i => i.id === id);
-    document.getElementById('itemName').value = item.name;
-    document.getElementById('quantity').value = item.quantity;
-    document.getElementById('location').value = item.location;
-    document.getElementById('supplier').value = item.supplier;
+// Quick Search Function
+function searchInventory() {
+    const query = document.getElementById('searchBox').value.toLowerCase();
+    const resultsTable = document.getElementById('searchResultsTable').getElementsByTagName('tbody')[0];
+    resultsTable.innerHTML = '';
 
-    deleteItem(id);
+    inventory.filter(item => 
+        item.name.toLowerCase().includes(query)
+    ).forEach(item => {
+        const row = resultsTable.insertRow();
+        row.innerHTML = `<td>${item.name}</td><td>${item.quantity}</td><td>${item.location}</td><td>${item.supplier}</td>`;
+    });
 }
 
-function deleteItem(id) {
-    inventory = inventory.filter(item => item.id !== id);
-    renderTable();
-    updateAnalytics();
+// Item Status Tag
+function addStatusTag(item) {
+    if (item.quantity === 0) return 'Discontinued';
+    if (item.quantity < lowStockThreshold) return 'Low Stock';
+    return 'In Stock';
 }
 
-function checkLowStock() {
-    const lowStockItems = inventory.filter(item => item.quantity < lowStockThreshold);
-    document.getElementById('alerts').innerText = 
-        lowStockItems.length ? "Low stock alert: Some items need restocking!" : "";
-}
+// Load Stock Movement History
+function loadHistory() {
+    const historyTable = document.getElementById('movementHistoryTable').getElementsByTagName('tbody')[0];
+    historyTable.innerHTML = ''; // Clear previous history
 
-function updateAnalytics() {
-    document.getElementById('totalItems').innerText = inventory.length;
-    document.getElementById('lowStockItems').innerText = 
-        inventory.filter(item => item.quantity < lowStockThreshold).length;
-}
-
-function clearForm() {
-    document.getElementById('itemName').value = '';
-    document.getElementById('quantity').value = '';
-    document.getElementById('location').value = '';
-    document.getElementById('supplier').value = '';
+    const historyData = JSON.parse(localStorage.getItem('stockHistory')) || [];
+    historyData.forEach(entry => {
+        const row = historyTable.insertRow();
+        row.innerHTML = `<td>${entry.date}</td><td>${entry.action}</td><td>${entry.item}</td>`;
+    });
 }
 
 // Open IndexedDB
 let db;
 const request = indexedDB.open("InventoryDB", 1);
 
-request.onerror = (event) => {
+request.onerror = event => {
     console.error("Database error:", event.target.errorCode);
 };
 
-request.onsuccess = (event) => {
+request.onsuccess = event => {
     db = event.target.result;
     loadInventory();
 };
 
-request.onupgradeneeded = (event) => {
+request.onupgradeneeded = event => {
     db = event.target.result;
     const objectStore = db.createObjectStore("inventory", { keyPath: "id" });
     objectStore.createIndex("name", "name", { unique: false });
-    objectStore.createIndex("quantity", "quantity", { unique: false });
-    objectStore.createIndex("location", "location", { unique: false });
-    objectStore.createIndex("supplier", "supplier", { unique: false });
 };
 
-// Add an item to IndexedDB and update the table
+// Add Item with Status Tag and Stock History
 function addItem() {
     const itemName = document.getElementById('itemName').value;
     const quantity = parseInt(document.getElementById('quantity').value);
     const location = document.getElementById('location').value;
     const supplier = document.getElementById('supplier').value;
-
-    if (!itemName || isNaN(quantity) || !location || !supplier) {
-        alert("Please fill in all fields");
-        return;
-    }
 
     const item = {
         id: Date.now(),
@@ -150,62 +93,125 @@ function addItem() {
         quantity: quantity,
         location: location,
         supplier: supplier,
+        status: addStatusTag({ quantity })
     };
 
-    // Save item to IndexedDB
     const transaction = db.transaction(["inventory"], "readwrite");
-    const objectStore = transaction.objectStore("inventory");
-    objectStore.add(item);
+    transaction.objectStore("inventory").add(item);
 
-    transaction.oncomplete = () => {
-        inventory.push(item);
-        renderTable();
-        clearForm();
-        updateAnalytics();
-    };
+    // Update stock history to log the "Added" action
+    const stockHistory = JSON.parse(localStorage.getItem('stockHistory')) || [];
+    stockHistory.push({ date: new Date().toLocaleString(), action: 'Added', item: itemName });
+    localStorage.setItem('stockHistory', JSON.stringify(stockHistory));
 
-    transaction.onerror = (event) => {
-        console.error("Transaction error:", event.target.error);
-    };
+    inventory.push(item);
+    renderTable();
+    updateAnalytics();
 }
 
-// Load inventory data from IndexedDB
-function loadInventory() {
-    inventory = []; // Clear existing inventory array
+// Render and Update Analytics
+function renderTable() {
+    const tbody = document.getElementById('inventoryTable').getElementsByTagName('tbody')[0];
+    tbody.innerHTML = '';
 
+    inventory.forEach(item => {
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td>${item.name}</td>
+            <td>${item.quantity}</td>
+            <td>${item.location}</td>
+            <td>${item.supplier}</td>
+            <td>${item.status}</td>
+            <td>
+                <button onclick="deleteItem(${item.id})">Delete</button>
+                <button onclick="editItem(${item.id})">Edit</button>
+            </td>
+        `;
+    });
+
+    updateAnalytics();
+}
+
+// Delete Item and Update Stock History
+function deleteItem(id) {
+    const item = inventory.find(item => item.id === id);
+    const transaction = db.transaction(["inventory"], "readwrite");
+    transaction.objectStore("inventory").delete(id);
+
+    // Update stock history to log the "Deleted" action
+    const stockHistory = JSON.parse(localStorage.getItem('stockHistory')) || [];
+    stockHistory.push({ date: new Date().toLocaleString(), action: 'Deleted', item: item.name });
+    localStorage.setItem('stockHistory', JSON.stringify(stockHistory));
+
+    inventory = inventory.filter(item => item.id !== id);
+    renderTable();
+    updateAnalytics();
+}
+
+// Update Analytics
+function updateAnalytics() {
+    document.getElementById('totalItems').innerText = inventory.length;
+    document.getElementById('lowStockItems').innerText = inventory.filter(item => item.quantity < lowStockThreshold).length;
+}
+
+// Load Inventory from IndexedDB
+function loadInventory() {
+    inventory = [];
     const transaction = db.transaction(["inventory"], "readonly");
     const objectStore = transaction.objectStore("inventory");
-
-    objectStore.openCursor().onsuccess = (event) => {
+    objectStore.openCursor().onsuccess = event => {
         const cursor = event.target.result;
         if (cursor) {
             inventory.push(cursor.value);
             cursor.continue();
         } else {
             renderTable();
-            renderHomeView();
             updateAnalytics();
         }
     };
 }
 
-// Delete an item from IndexedDB
-function deleteItem(id) {
-    const transaction = db.transaction(["inventory"], "readwrite");
-    const objectStore = transaction.objectStore("inventory");
+// On page load
+window.onload = () => {
+    showTab('home');
+    loadInventory();
+};
 
-    objectStore.delete(id);
-
-    transaction.oncomplete = () => {
-        inventory = inventory.filter(item => item.id !== id);
-        renderTable();
-        updateAnalytics();
-    };
+// Delete History Data with Passcode
+function deleteHistory() {
+    const enteredPasscode = prompt("Enter passcode to delete all history:");
+    if (enteredPasscode === "0701330765") {
+        localStorage.removeItem('stockHistory');
+        loadHistory();
+        alert("History deleted successfully.");
+    } else {
+        alert("Incorrect passcode. History was not deleted.");
+    }
 }
 
-// Update analytics counts
-function updateAnalytics() {
-    document.getElementById('totalItems').innerText = inventory.length;
-    document.getElementById('lowStockItems').innerText = 
-        inventory.filter(item => item.quantity < lowStockThreshold).length;
+let passcode = localStorage.getItem('inventoryPasscode') || '0701330765'; // Set default passcode to "0701330765"
+
+
+// Change Passcode
+function changePasscode() {
+    const currentPasscode = document.getElementById('currentPasscode').value;
+    const newPasscode = document.getElementById('newPasscode').value;
+
+    // Retrieve current passcode from local storage or default to 0701330765
+    const savedPasscode = localStorage.getItem('inventoryPasscode') || "0701330765";
+
+    if (currentPasscode === savedPasscode) {
+        if (newPasscode) {
+            // Update the passcode in local storage
+            localStorage.setItem('inventoryPasscode', newPasscode);
+            alert("Passcode changed successfully.");
+            document.getElementById('currentPasscode').value = '';
+            document.getElementById('newPasscode').value = '';
+        } else {
+            alert("New passcode cannot be empty.");
+        }
+    } else {
+        alert("Current passcode is incorrect.");
+    }
 }
+
